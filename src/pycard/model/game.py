@@ -30,7 +30,12 @@ class Game:
             d = deck.Deck()
             d.shuffle()
 
-        hands, obj.stock = d.deal(7, num_players + num_computers)
+        # Hand size of 7 for > 2 players, 13 for two players
+        hand_size = 7
+        if num_players + num_computers == 2:
+            hand_size = 13
+
+        hands, obj.stock = d.deal(hand_size, num_players + num_computers)
         obj.debug = debug
 
         for i in range(num_players + num_computers):
@@ -53,10 +58,10 @@ class Game:
                 self.play_turn(player)
 
                 if (len(player.hand) == 0) or (len(self.stock) == 0):
-                    score_dict = self.score_players()
+                    scores = self.score_players()
                     print("============================================================")
-                    print("Game over. Final scores:")
-                    for player_name, score in score_dict:
+                    print(f"Game over. {scores[0][0]} wins. Final scores:")
+                    for player_name, score in scores:
                         print(f"\t{player_name}: {score}")
                     print("============================================================")
                     sys.exit(0)
@@ -75,10 +80,10 @@ class Game:
             for meld in player.melds:
                 player_score += sum(deck.CARD_VALUE_MAP[c[0]] for c in meld)
 
-            player_score -= sum(deck.CARD_VALUE_MAP[c] for c in player.hand)
+            player_score -= sum(deck.CARD_VALUE_MAP[c.rank] for c in player.hand)
             score_dict[player_name] = player_score
 
-        return score_dict
+        return sorted(score_dict.items(), key=lambda x: x[1], reverse=True)
 
     def validate_meld(self, meld: ([deck.Card], str)) -> bool:
         """Validate a meld given other players melds.
@@ -99,7 +104,8 @@ class Game:
 
         # Check for run
         dists = [x - y for (x, y) in zip(rank_vals[1:], rank_vals)]
-        if all([x == 1 for x in dists]):
+        suits = set([x.suit for x in cards])
+        if len(suits) == 1 and all([x == 1 for x in dists]):
             return True
 
         return False
